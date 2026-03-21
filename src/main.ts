@@ -12,7 +12,17 @@ async function main() {
     streamAudioAndSendToElevenLabs(connection);
   });
 
-  connection.on(RealtimeEvents.COMMITTED_TRANSCRIPT, (transcript) => {});
+  connection.on(RealtimeEvents.COMMITTED_TRANSCRIPT, (transcript) => {
+    const { text } = transcript;
+    const possibles_transcriptions = ["jess", "yes", "jessie", "A.S"];
+    const isWakeUpWordInText = possibles_transcriptions.some(
+      (possible_transcription) =>
+        text.toLowerCase().includes(possible_transcription),
+    );
+    if (isWakeUpWordInText) {
+      console.log("Holiii");
+    }
+  });
 }
 
 main();
