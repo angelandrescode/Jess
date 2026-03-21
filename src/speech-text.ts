@@ -1,12 +1,9 @@
 import AudioRecorder from "node-audiorecorder";
 import "dotenv/config";
-import {
-  ElevenLabsClient,
-  AudioFormat,
-  RealtimeConnection,
-} from "@elevenlabs/elevenlabs-js";
+import { AudioFormat, RealtimeConnection } from "@elevenlabs/elevenlabs-js";
 import VAD from "node-vad";
 import { StateManager } from "./global-states";
+import { elevenlabs } from "./constants";
 
 let counterChunksSilence = 0;
 let counterChunksVoice = 0;
@@ -16,6 +13,7 @@ let newSpeechWasCommited = false;
 const bytesEachChunk = 3200; // para 100ms de audio a 16kHz y 16 bits (2 bytes por muestra) mono: 16000 muestras/seg * 0.1 seg * 2 bytes/muestra = 3200 bytes
 let totalBufferToSend = Buffer.alloc(0); // Buffer que va a guardar un chunk de audio que se mandara a eleven labs
 const vad = new VAD(VAD.Mode.VERY_AGGRESSIVE);
+
 async function commitSystemOnChunk(
   connectionToElevenLabs: RealtimeConnection,
   chunk: Buffer, //3200bytes,
@@ -64,7 +62,6 @@ export function streamAudioAndSendToElevenLabs(
     format: "raw",
   };
   let audioRecorder = new AudioRecorder(options, console);
-
   //Cuando termine, enviar lo restante y cerrar la conexion
   audioRecorder.on("end", () => {
     if (totalBufferToSend.length > 0) {
@@ -82,6 +79,7 @@ export function streamAudioAndSendToElevenLabs(
     .start()
     .stream()
     .on("data", async (data: Buffer) => {
+      if (StateManager.getState().isTurnOfJess.value) return;
       // Concatenar al buffer acumulado
       totalBufferToSend = Buffer.concat([totalBufferToSend, data]);
       // Mientras tengamos suficiente para un chunk (3200 bytes)
@@ -101,7 +99,6 @@ export function streamAudioAndSendToElevenLabs(
 }
 
 export async function connectToSpeechToText() {
-  const elevenlabs = new ElevenLabsClient();
   const connection = await elevenlabs.speechToText.realtime.connect({
     modelId: "scribe_v2_realtime",
     audioFormat: AudioFormat.PCM_16000,
