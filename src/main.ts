@@ -12,15 +12,16 @@ async function main() {
     streamAudioAndSendToElevenLabs(connection);
   });
 
-  connection.on(RealtimeEvents.COMMITTED_TRANSCRIPT, (transcript) => {
+  connection.on(RealtimeEvents.COMMITTED_TRANSCRIPT, async (transcript) => {
     const { text } = transcript;
-    const possibles_transcriptions = ["jess", "yes", "jessie", "A.S"];
-    const isWakeUpWordInText = possibles_transcriptions.some(
+    const possiblesTranscriptions = ["jess", "yes", "jessie", "A.S"];
+    const isWakeUpWordInText = possiblesTranscriptions.some(
       (possible_transcription) =>
         text.toLowerCase().includes(possible_transcription),
     );
     if (isWakeUpWordInText) {
-      console.log("Holiii");
+      StateManager.setIsInConversation(true);
+      StateManager.setIsTurnOfJess(true);
     }
   });
 }

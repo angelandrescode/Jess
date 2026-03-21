@@ -6,6 +6,7 @@ import {
   RealtimeConnection,
 } from "@elevenlabs/elevenlabs-js";
 import VAD from "node-vad";
+import { StateManager } from "./global-states";
 
 let counterChunksSilence = 0;
 let thresholdCounterChunksSilence = 10;
@@ -64,6 +65,7 @@ export function streamAudioAndSendToElevenLabs(
         sampleRate: 16000,
       });
       connectionToElevenLabs.commit();
+      StateManager.setIsListening(false);
     }
     totalBufferToSend = Buffer.alloc(0);
   });
