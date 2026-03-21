@@ -15,7 +15,7 @@ let thresholdCounterChunkVoice = 3; // Lo suficiente como para no perder tanta i
 let newSpeechWasCommited = false;
 const bytesEachChunk = 3200; // para 100ms de audio a 16kHz y 16 bits (2 bytes por muestra) mono: 16000 muestras/seg * 0.1 seg * 2 bytes/muestra = 3200 bytes
 let totalBufferToSend = Buffer.alloc(0); // Buffer que va a guardar un chunk de audio que se mandara a eleven labs
-const vad = new VAD(VAD.Mode.AGGRESSIVE);
+const vad = new VAD(VAD.Mode.VERY_AGGRESSIVE);
 async function commitSystemOnChunk(
   connectionToElevenLabs: RealtimeConnection,
   chunk: Buffer, //3200bytes,
@@ -100,7 +100,7 @@ export function streamAudioAndSendToElevenLabs(
     });
 }
 
-export async function connectToElevenlabs() {
+export async function connectToSpeechToText() {
   const elevenlabs = new ElevenLabsClient();
   const connection = await elevenlabs.speechToText.realtime.connect({
     modelId: "scribe_v2_realtime",
