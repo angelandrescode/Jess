@@ -22,7 +22,9 @@
     "@elevenlabs/client": "^0.15.2",
     "@elevenlabs/elevenlabs-js": "^2.39.0",
     "dotenv": "^17.3.1",
-    "node-audiorecorder": "^3.0.0"
+    "node-audiorecorder": "^3.0.0",
+    "node-vad": "^1.1.4",
+    "openai": "^6.32.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.0"
