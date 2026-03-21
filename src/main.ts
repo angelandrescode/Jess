@@ -5,6 +5,8 @@ import {
   streamAudioAndSendToElevenLabs,
 } from "./speech-text";
 import player from "node-wav-player";
+import { handleIntention, initConversation } from "./router";
+import OpenAI from "openai";
 
 const greetings = [
   "/Users/andres/Desktop/Jess/audios/greeting1.wav",
@@ -28,7 +30,7 @@ async function main() {
     StateManager.setIsListening(true);
     streamAudioAndSendToElevenLabs(speechToTextConnection);
   });
-
+  let conversation: OpenAI.Conversations.Conversation;
   speechToTextConnection.on(
     RealtimeEvents.COMMITTED_TRANSCRIPT,
     async (transcript) => {
@@ -38,16 +40,33 @@ async function main() {
         (possible_transcription) =>
           text.toLowerCase().includes(possible_transcription),
       );
-      if (isWakeUpWordInText) {
+      if (
+        isWakeUpWordInText &&
+        !StateManager.getState().isInConversation.value
+      ) {
+        conversation = await initConversation();
         StateManager.setIsInConversation(true);
         StateManager.setIsTurnOfJess(true);
-        StateManager.setIsTurnOfUser(true);
+        StateManager.setIsTurnOfUser(false);
+        // escoje el numero aleatorio de cualquier audio
         const greetingNumber = Math.floor(Math.abs(Math.random() * 10 - 5));
         await player.play({
           path: greetings[greetingNumber],
+          sync: true, // espera a que acabe el audio
         });
         StateManager.setIsTurnOfJess(false);
         StateManager.setIsTurnOfUser(true);
+      }
+      //Solo entra a este condicional cuando el usuario esta hablando.
+      if (StateManager.getState().isInConversation.value) {
+        const routerResponse = handleIntention(conversation, text);
+        // Esto en caso de que haya habido un bug y los estados se hayan desincronizado
+        if (!routerResponse) {
+          throw new Error(
+            "El router ha fallado, puede que sea un problema en los estados",
+          );
+        }
+        // Mapar agente y pasar intencion
       }
     },
   );

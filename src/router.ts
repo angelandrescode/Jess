@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import "dotenv/config";
 import { StateManager } from "./global-states";
+import { RouterResponse } from "./types";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -43,7 +44,7 @@ export async function initConversation() {
 export async function handleIntention(
   conversation: OpenAI.Conversations.Conversation,
   input: string,
-) {
+): Promise<RouterResponse | undefined> {
   const { isInConversation, isTurnOfJess } = StateManager.getState();
   if (!isInConversation || !isTurnOfJess) return;
   const response = await client.responses.create({
@@ -52,6 +53,6 @@ export async function handleIntention(
     input,
     conversation: conversation.id,
   });
-
-  return response.output_text;
+  const routerResponse: RouterResponse = JSON.parse(response.output_text);
+  return routerResponse;
 }
