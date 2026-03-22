@@ -47,13 +47,14 @@ async function commitSystemOnChunk(
     counterChunksSilence = 0;
     // Cuando empieza a hablar, empieza otro "speech" otra cosa que hay que COMMITEAR, por eso, se desbloquea el commiteo con la flag para que sea capaz de commitear.
     newSpeechWasCommited = false;
-    StateManager.setIsTurnOfUser(true);
+    console.log("seteando a jess a false");
     StateManager.setIsTurnOfJess(false);
+    StateManager.setIsTurnOfUser(true);
   }
 }
 
 export function streamAudioAndSendToElevenLabs(
-  connectionToElevenLabs: RealtimeConnection,
+  connectionToElevenLabsGetter: () => RealtimeConnection,
 ) {
   const options = {
     silence: 0, // Duration of silence in seconds before it stops recording.
@@ -62,14 +63,15 @@ export function streamAudioAndSendToElevenLabs(
     format: "raw",
   };
   let audioRecorder = new AudioRecorder(options, console);
+  let active = true;
   //Cuando termine, enviar lo restante y cerrar la conexion
   audioRecorder.on("end", () => {
     if (totalBufferToSend.length > 0) {
-      connectionToElevenLabs.send({
+      connectionToElevenLabsGetter().send({
         audioBase64: totalBufferToSend.toString("base64"),
         sampleRate: 16000,
       });
-      connectionToElevenLabs.commit();
+      connectionToElevenLabsGetter().commit();
       StateManager.setIsListening(false);
     }
     totalBufferToSend = Buffer.alloc(0);
@@ -79,7 +81,11 @@ export function streamAudioAndSendToElevenLabs(
     .start()
     .stream()
     .on("data", async (data: Buffer) => {
-      if (StateManager.getState().isTurnOfJess.value) return;
+      if (!active) return;
+      if (StateManager.getState().isTurnOfJess.value) {
+        console.log("no se procesa la data de audio porque es turno de jess");
+        return;
+      }
       // Concatenar al buffer acumulado
       totalBufferToSend = Buffer.concat([totalBufferToSend, data]);
       // Mientras tengamos suficiente para un chunk (3200 bytes)
@@ -89,22 +95,31 @@ export function streamAudioAndSendToElevenLabs(
         // Obtenemos lo que sobro y lo guardamos para el proximo ciclo
         totalBufferToSend = totalBufferToSend.subarray(bytesEachChunk);
         //Enviamos chunk a elevenlabs
-        connectionToElevenLabs.send({
+        connectionToElevenLabsGetter().send({
           audioBase64: chunk.toString("base64"),
           sampleRate: 16000,
         });
-        commitSystemOnChunk(connectionToElevenLabs, chunk);
+        commitSystemOnChunk(connectionToElevenLabsGetter(), chunk);
       }
     });
+  return {
+    stopAudioRecorder: () => {
+      active = false;
+      audioRecorder.stop();
+    },
+  };
 }
 
 export async function connectToSpeechToText() {
+  console.log("Conectando speech to text");
   const connection = await elevenlabs.speechToText.realtime.connect({
     modelId: "scribe_v2_realtime",
     audioFormat: AudioFormat.PCM_16000,
     sampleRate: 16000,
     includeTimestamps: true,
     languageCode: "es", // Español de España
+    minSilenceDurationMs: 2000,
   });
+  console.log("conectado");
   return connection;
 }

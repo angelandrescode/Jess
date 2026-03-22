@@ -1,22 +1,9 @@
 import OpenAI from "openai";
 import "dotenv/config";
 import { StateManager } from "./global-states";
-import { RouterResponse } from "./types";
-
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-const agents = {
-  system: {
-    description: "cosas que implique manipular software",
-  },
-  ender: {
-    description: "si de alguna u otra forma pide terminar la conversación",
-  },
-  conversational: {
-    description:
-      "si no pide hacer ninguna acción, no sabes que decidir, o la accion que pide no esta en los parámetros, usa esta",
-  },
-};
+import { openai, agents } from "./constants";
+import { RouterResponseType } from "./types";
+import { AgentType } from "./types";
 
 const listOfAgentsWithDescription = Object.entries(agents)
   .map(([agent_key, agent_value]) => {
@@ -37,22 +24,32 @@ Agentes disponibles: ${listOfAgentsWithDescription}
 La intencion es un texto explicando MUY BREVEMENTE y sin perder información, cual es la intención del usuario, no uses conectores y los verbos en infinitivo`;
 
 export async function initConversation() {
-  const conversation = await client.conversations.create();
+  const conversation = await openai.conversations.create();
   return conversation;
 }
 
 export async function handleIntention(
   conversation: OpenAI.Conversations.Conversation,
-  input: string,
-): Promise<RouterResponse | undefined> {
+  transcript: string,
+): Promise<RouterResponseType | undefined> {
   const { isInConversation, isTurnOfJess } = StateManager.getState();
   if (!isInConversation || !isTurnOfJess) return;
-  const response = await client.responses.create({
+  const response = await openai.responses.create({
     model: "gpt-3.5-turbo",
     instructions,
-    input,
+    input: transcript,
     conversation: conversation.id,
   });
-  const routerResponse: RouterResponse = JSON.parse(response.output_text);
+  const serializedResponse = JSON.parse(response.output_text);
+  // Se obtiene el nombre del agente
+  const nameAgent: string = serializedResponse.agent;
+  // Obtenemos el agente
+  const agent = agents[nameAgent];
+  // Preparamos la respuesta a retronar
+  const routerResponse: RouterResponseType = {
+    agent: agent,
+    intention: serializedResponse.intention,
+    literalTranscript: transcript,
+  };
   return routerResponse;
 }
