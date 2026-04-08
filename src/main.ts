@@ -10,7 +10,7 @@ import OpenAI from "openai";
 import { CommittedTranscriptMessage } from "@elevenlabs/client";
 import { RealtimeErrorPayload } from "@elevenlabs/elevenlabs-js/wrapper/realtime/connection";
 
-//Nos quedamos en un error, que aveces pasa que el sistema de commiteo, hace dos commits justo mientras se estan procesando estos con gpt. Lo que lleva a que ocurra un error:
+//TODO Nos quedamos en un error, que aveces pasa que el sistema de commiteo, hace dos commits justo mientras se estan procesando estos con gpt. Lo que lleva a que ocurra un error:
 //"Another process is currently operating on this conversation. Please retry in a few seconds." entocnes, la solucion seria: sabiendo que cada commit es un speech, entonces, simplemente
 // bloquear el microfono luego del commit, tecnicamente, parar el microfono. Y cuando termine de hablar jess, que vuelva a encenderlo, si es necesario, usar el sistema de subscripcion de los estados.
 
@@ -74,11 +74,12 @@ async function main() {
     //Solo entra a este condicional cuando el usuario esta hablando.
     else if (StateManager.getState().isInConversation.value) {
       console.log("\x1b[32m%s\x1b[0m", "transcript del speech: ", transcript);
+      if (!text || text.trim() === "") return; // Evita procesar textos vacios
       const routerResponse = await handleIntention(conversation, text);
       // Esto en caso de que haya habido un bug y los estados se hayan desincronizado
       if (!routerResponse) {
         throw new Error(
-          "El router ha fallado, puede que sea un problema en los estados",
+          "El router ha fallado, puede que sea un problema en los estados (StateManager)",
         );
       }
       // Mapar agente y pasar intencion
